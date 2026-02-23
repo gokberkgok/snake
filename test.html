@@ -1,0 +1,142 @@
+<div>
+<div style="position: relative; width: 400px; height: 400px;">
+    <canvas id="gameCanvas"
+        width="400"
+        height="400" 
+        tabindex="0"
+        style="
+        background-color: black; 
+        border: 4px solid #fff; 
+        box-shadow: 0 0 15px rgba(0,0,0,0.5);
+        display: block;
+        outline: none;">
+    </canvas>
+    <div id="uiScreen" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; background: rgba(0, 0, 0, 0.85); color: white; padding: 20px; border: 2px solid white; border-radius: 10px; width: 85%; box-sizing: border-box; pointer-events: none;">
+        <h2 id="uiTitle" style="color: #00ff00; margin-top: 0;">YILAN OYUNU</h2>
+        <p id="uiDesc" style="margin-bottom: 0;">SPACE-Oyna | Ok Tuşları - Hareket </p>
+    </div>
+ </div>
+</div>
+<script>
+    (function() {
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const uiScreen = document.getElementById("uiScreen");
+        const uiTitle = document.getElementById("uiTitle");
+        const uiDesc = document.getElementById("uiDesc");
+
+        const gridSize = 20; 
+        let snake, food, dx, dy, gameInterval;
+        let gameState = "START"; // START, PLAYING, GAMEOVER
+
+        // Sadece ilk çizimi yapar, oyunu başlatmaz
+        function initSetup() {
+            snake = [{x: 200, y: 200}]; 
+            food = spawnFood();
+            dx = 0;
+            dy = -gridSize; 
+            draw();
+        }
+
+        function spawnFood() {
+            return {
+                x: Math.floor(Math.random() * (canvas.width / gridSize)) * gridSize,
+                y: Math.floor(Math.random() * (canvas.height / gridSize)) * gridSize
+            };
+        }
+
+        function startGame() {
+            gameState = "PLAYING";
+            uiScreen.style.display = "none";
+            snake = [{x: 200, y: 200}]; 
+            food = spawnFood();
+            dx = 0;
+            dy = -gridSize; 
+            
+            if (gameInterval) clearInterval(gameInterval);
+            gameInterval = setInterval(gameLoop, 100);
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+        }
+
+        function update() {
+            if (gameState !== "PLAYING") return;
+
+            const head = {x: snake[0].x + dx, y: snake[0].y + dy};
+
+            // Duvara çarpma
+            if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height) {
+                endGame();
+                return;
+            }
+
+            // Kuyruğa çarpma
+            for (let i = 0; i < snake.length; i++) {
+                if (head.x === snake[i].x && head.y === snake[i].y) {
+                    endGame();
+                    return;
+                }
+            }
+
+            snake.unshift(head); 
+
+            if (head.x === food.x && head.y === food.y) {
+                food = spawnFood(); 
+            } else {
+                snake.pop(); 
+            }
+        }
+
+        function draw() {
+            ctx.fillStyle = "black";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = "#00ff00";
+            ctx.fillRect(food.x, food.y, gridSize - 1, gridSize - 1);
+
+            ctx.fillStyle = "#ff0000";
+            snake.forEach(part => {
+                ctx.fillRect(part.x, part.y, gridSize - 1, gridSize - 1);
+            });
+        }
+
+        function endGame() {
+            gameState = "GAMEOVER";
+            clearInterval(gameInterval);
+            uiTitle.innerText = "YANDIN";
+            uiTitle.style.color = "#ff4d4d";
+            uiDesc.innerHTML = "Tekrar oynamak için <b>SPACE</b> tuşuna bas.";
+            uiScreen.style.display = "block";
+        }
+
+        // Klavye dinleyicisi (sayfa genelinde değil, canvas üzerinde dinliyoruz)
+        // Eğer çalışmazsa diye window seviyesinde dinliyoruz ama canvas'a tıklanmasını öneriyoruz.
+        window.addEventListener("keydown", (e) => {
+            const isSpace = e.code === "Space" || e.key === " " || e.keyCode === 32;
+            const isArrow = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].indexOf(e.code) > -1;
+
+            if (gameState === "PLAYING" && (isSpace || isArrow)) {
+                e.preventDefault(); // Oynarken sayfa kaymasın
+            }
+
+            if ((gameState === "START" || gameState === "GAMEOVER") && isSpace) {
+                e.preventDefault();
+                startGame();
+                return;
+            }
+
+            if (gameState === "PLAYING") {
+                if (e.key === "ArrowUp" && dy === 0) { dx = 0; dy = -gridSize; }
+                else if (e.key === "ArrowDown" && dy === 0) { dx = 0; dy = gridSize; }
+                else if (e.key === "ArrowLeft" && dx === 0) { dx = -gridSize; dy = 0; }
+                else if (e.key === "ArrowRight" && dx === 0) { dx = gridSize; dy = 0; }
+            }
+        }, { passive: false });
+
+        // Sistemi ilk çizimle başlat ama beklet
+        initSetup();
+    })();
+</script>
